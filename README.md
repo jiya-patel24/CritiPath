@@ -1,2 +1,2 @@
-# SCHEDULIX
-Intelligent Examination Scheduling &amp; Resource Optimization System
+# CritiPath
+Route finding with built-in Network Resilience Analysis
