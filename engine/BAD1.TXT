@@ -1,0 +1,2 @@
+NODE 0 A
+EDGE 0 5 1 0

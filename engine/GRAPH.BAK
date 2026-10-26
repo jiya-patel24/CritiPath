@@ -1,0 +1,945 @@
+#include <iostream.h>
+#include <string.h>
+#include <conio.h>
+#include <time.h>
+#include <fstream.h>
+#include <stdio.h>      // only needed for remove() in the demo
+
+// ================== NODE ==================
+class Node
+{
+public:
+    int id;
+    char label[50];
+
+    Node()
+    {
+        id = -1;
+        label[0] = '\0';
+    }
+
+    Node(int nodeId, char nodeLabel[])
+    {
+        id = nodeId;
+        strcpy(label, nodeLabel);
+    }
+};
+
+// ================== EDGE ==================
+class Edge
+{
+public:
+    int fromId;
+    int toId;
+    float cost;
+    int directed;   // 0 = two-way, 1 = one-way
+
+    Edge()
+    {
+        fromId = -1;
+        toId = -1;
+        cost = 0;
+        directed = 0;
+    }
+
+    Edge(int from, int to, float edgeCost, int isDirected)
+    {
+        fromId = from;
+        toId = to;
+        cost = edgeCost;
+        directed = isDirected;
+    }
+};
+
+// ================== GRAPH ==================
+class Graph
+{
+private:
+    Node* nodes;
+    int nodeCount;
+    int nodeCapacity;
+
+    Edge* edges;
+    int edgeCount;
+    int edgeCapacity;
+
+    void growNodeArray()
+    {
+        int newCapacity = nodeCapacity * 2;
+        Node* newArray = new Node[newCapacity];
+        int i;
+        for (i = 0; i < nodeCount; i++)
+            newArray[i] = nodes[i];
+        delete[] nodes;
+        nodes = newArray;
+        nodeCapacity = newCapacity;
+    }
+
+    void growEdgeArray()
+    {
+        int newCapacity = edgeCapacity * 2;
+        Edge* newArray = new Edge[newCapacity];
+        int i;
+        for (i = 0; i < edgeCount; i++)
+            newArray[i] = edges[i];
+        delete[] edges;
+        edges = newArray;
+        edgeCapacity = newCapacity;
+    }
+
+    void removeEdgesForNode(int id)
+    {
+        int i = 0;
+        int j;
+
+        while (i < edgeCount)
+        {
+            if (edges[i].fromId == id || edges[i].toId == id)
+            {
+                for (j = i; j < edgeCount - 1; j++)
+                    edges[j] = edges[j + 1];
+                edgeCount--;
+            }
+            else
+            {
+                i++;
+            }
+        }
+    }
+
+public:
+    Graph()
+    {
+        nodeCapacity = 4;
+        nodes = new Node[nodeCapacity];
+        nodeCount = 0;
+
+        edgeCapacity = 4;
+        edges = new Edge[edgeCapacity];
+        edgeCount = 0;
+    }
+
+    ~Graph()
+    {
+        delete[] nodes;
+        delete[] edges;
+    }
+
+    void addNode(int id, char label[])
+    {
+        if (nodeCount == nodeCapacity)
+            growNodeArray();
+        nodes[nodeCount] = Node(id, label);
+        nodeCount++;
+    }
+
+    void addEdge(int fromId, int toId, float cost, int directed)
+    {
+        if (edgeCount == edgeCapacity)
+            growEdgeArray();
+        edges[edgeCount] = Edge(fromId, toId, cost, directed);
+        edgeCount++;
+    }
+
+    void removeNode(int id)
+    {
+        int i;
+        int index = -1;
+
+        for (i = 0; i < nodeCount; i++)
+        {
+            if (nodes[i].id == id)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1)
+        {
+            cout << "removeNode: node " << id << " not found\n";
+            return;
+        }
+
+        for (i = index; i < nodeCount - 1; i++)
+            nodes[i] = nodes[i + 1];
+
+        nodeCount--;
+
+        removeEdgesForNode(id);
+    }
+
+    void removeEdge(int fromId, int toId)
+    {
+        int i;
+        int j;
+        int matches;
+
+        for (i = 0; i < edgeCount; i++)
+        {
+            matches = 0;
+
+            if (edges[i].directed == 1)
+            {
+                if (edges[i].fromId == fromId && edges[i].toId == toId)
+                    matches = 1;
+            }
+            else
+            {
+                if ((edges[i].fromId == fromId && edges[i].toId == toId) ||
+                    (edges[i].fromId == toId && edges[i].toId == fromId))
+                    matches = 1;
+            }
+
+            if (matches == 1)
+            {
+                for (j = i; j < edgeCount - 1; j++)
+                    edges[j] = edges[j + 1];
+                edgeCount--;
+                return;
+            }
+        }
+
+        cout << "removeEdge: edge " << fromId << " -> " << toId << " not found\n";
+    }
+
+    void printGraph()
+    {
+        int i;
+
+        cout << "----- NODES -----\n";
+        for (i = 0; i < nodeCount; i++)
+            cout << nodes[i].id << ": " << nodes[i].label << "\n";
+
+        cout << "----- EDGES -----\n";
+        for (i = 0; i < edgeCount; i++)
+        {
+            cout << edges[i].fromId << " -> " << edges[i].toId
+                 << " (cost=" << edges[i].cost
+                 << ", directed=" << edges[i].directed << ")\n";
+        }
+    }
+
+    // ---- METHODS NEEDED FOR PATHFINDING ----
+
+    int getNumNodes()
+    {
+        return nodeCount;
+    }
+
+    float getWeight(int fromId, int toId)
+    {
+        int i;
+        for (i = 0; i < edgeCount; i++)
+        {
+            if (edges[i].directed == 1)
+            {
+                if (edges[i].fromId == fromId && edges[i].toId == toId)
+                    return edges[i].cost;
+            }
+            else
+            {
+                if ((edges[i].fromId == fromId && edges[i].toId == toId) ||
+                    (edges[i].fromId == toId && edges[i].toId == fromId))
+                    return edges[i].cost;
+            }
+        }
+        return -1;   // no edge found
+    }
+
+    // ---- READ-ONLY GETTERS (for save/load) ----
+    int getNodeCount()          { return nodeCount; }
+    int getEdgeCount()          { return edgeCount; }
+    Node getNodeAt(int index)   { return nodes[index]; }
+    Edge getEdgeAt(int index)   { return edges[index]; }
+};
+
+// ================== PATHFINDING STRATEGY (ABSTRACT BASE) ==================
+const int MAX_NODES = 20;
+
+class PathfindingStrategy
+{
+    public:
+        virtual int findPath(Graph &g, int source, int destination,
+                              int outPath[], int &outPathLength) = 0;
+        virtual ~PathfindingStrategy() {}
+};
+
+// ================== BFS STRATEGY ==================
+class BFSStrategy : public PathfindingStrategy
+{
+    public:
+        int findPath(Graph &g, int source, int destination,
+                      int outPath[], int &outPathLength)
+        {
+            int n = g.getNumNodes();
+            int visited[MAX_NODES];
+            int parent[MAX_NODES];
+
+            int i;
+            for (i = 0; i < n; i++)
+            {
+                visited[i] = 0;
+                parent[i] = -1;
+            }
+
+            int queueArr[MAX_NODES];
+            int front = 0, rear = 0;
+
+            queueArr[rear++] = source;
+            visited[source] = 1;
+
+            while (front < rear)
+            {
+                int current = queueArr[front++];
+                if (current == destination)
+                    break;
+
+                int neighbor;
+                for (neighbor = 0; neighbor < n; neighbor++)
+                {
+                    if (g.getWeight(current, neighbor) != -1 && !visited[neighbor])
+                    {
+                        visited[neighbor] = 1;
+                        parent[neighbor] = current;
+                        queueArr[rear++] = neighbor;
+                    }
+                }
+            }
+
+            if (!visited[destination])
+            {
+                outPathLength = 0;
+                return -1;
+            }
+
+            int temp[MAX_NODES];
+            int count = 0;
+            int node = destination;
+            while (node != -1)
+            {
+                temp[count++] = node;
+                node = parent[node];
+            }
+
+            outPathLength = count;
+            for (i = 0; i < count; i++)
+                outPath[i] = temp[count - 1 - i];
+
+            return count - 1;
+        }
+};
+
+// ================== DIJKSTRA STRATEGY ==================
+class DijkstraStrategy : public PathfindingStrategy
+{
+    public:
+        int findPath(Graph &g, int source, int destination,
+                      int outPath[], int &outPathLength)
+        {
+            int n = g.getNumNodes();
+            int dist[MAX_NODES];
+            int visited[MAX_NODES];
+            int parent[MAX_NODES];
+
+            int i;
+            for (i = 0; i < n; i++)
+            {
+                dist[i] = 9999;      // "infinity" sentinel
+                visited[i] = 0;
+                parent[i] = -1;
+            }
+            dist[source] = 0;
+
+            int count;
+            for (count = 0; count < n - 1; count++)
+            {
+                // find closest unvisited node
+                int u = -1, minDist = 9999;
+                for (i = 0; i < n; i++)
+                {
+                    if (!visited[i] && dist[i] < minDist)
+                    {
+                        minDist = dist[i];
+                        u = i;
+                    }
+                }
+
+                if (u == -1)
+                    break;   // remaining nodes unreachable
+
+                visited[u] = 1;
+
+                // relax neighbors of u
+                int v;
+                for (v = 0; v < n; v++)
+                {
+                    float weight = g.getWeight(u, v);
+                    if (weight != -1 && !visited[v] && dist[u] + weight < dist[v])
+                    {
+                        dist[v] = dist[u] + (int)weight;
+                        parent[v] = u;
+                    }
+                }
+            }
+
+            if (dist[destination] == 9999)
+            {
+                outPathLength = 0;
+                return -1;
+            }
+
+            int temp[MAX_NODES];
+            int cnt = 0;
+            int node = destination;
+            while (node != -1)
+            {
+                temp[cnt++] = node;
+                node = parent[node];
+            }
+
+            outPathLength = cnt;
+            for (i = 0; i < cnt; i++)
+                outPath[i] = temp[cnt - 1 - i];
+
+            return dist[destination];
+        }
+};
+
+// ================== TIMER ==================
+class Timer
+{
+private:
+    clock_t startTime;
+    clock_t endTime;
+
+public:
+    void start()
+    {
+        startTime = clock();
+    }
+
+    void stop()
+    {
+        endTime = clock();
+    }
+
+    float getElapsedSeconds()
+    {
+        return (float)(endTime - startTime) / CLOCKS_PER_SEC;
+    }
+};
+
+// ================== LOGGER (file handling) ==================
+// Appends "<timestamp> - <message>" as a new line in LOG.TXT.
+// Returns 0 on success, -1 if the file could not be opened.
+int logEvent(char message[])
+{
+    ofstream logFile;
+    logFile.open("LOG.TXT", ios::app);
+
+    if (!logFile)
+    {
+        cout << "Could not open log file\n";
+        return -1;
+    }
+
+    time_t now = time(0);
+    char* timeString = ctime(&now);
+
+    // ctime() ends with its own '\n'. Overwrite it with '\0'
+    // so the timestamp and message stay on one line.
+    int i = 0;
+    while (timeString[i] != '\0')
+    {
+        if (timeString[i] == '\n')
+            timeString[i] = '\0';
+        i++;
+    }
+
+    logFile << timeString << " - " << message << "\n";
+
+    logFile.close();
+    return 0;
+}
+
+// ---------- TASK 1: NEAREST TARGET (fewest steps) ----------
+// Returns node id of nearest target, or -1 if none reachable.
+// A start node that is itself a target returns itself.
+int findNearestTarget(Graph &g, int startNode, int isTarget[])
+{
+    int n = g.getNumNodes();
+    if (n > MAX_NODES) n = MAX_NODES;
+    if (startNode < 0 || startNode >= n)
+        return -1;
+
+    int visited[MAX_NODES];
+    int queueArr[MAX_NODES];
+    int front = 0, rear = 0;
+    int i, current, neighbor;
+
+    for (i = 0; i < MAX_NODES; i++)
+        visited[i] = 0;
+
+    queueArr[rear++] = startNode;
+    visited[startNode] = 1;
+
+    while (front < rear)
+    {
+        current = queueArr[front++];
+
+        if (isTarget[current] == 1)      // first target found = nearest
+            return current;
+
+        for (neighbor = 0; neighbor < n; neighbor++)
+        {
+            if (g.getWeight(current, neighbor) != -1 && !visited[neighbor])
+            {
+                visited[neighbor] = 1;
+                queueArr[rear++] = neighbor;
+            }
+        }
+    }
+    return -1;                           // no target reachable
+}
+
+// ---------- TASK 2: BLOCKAGE + REROUTE ----------
+void printPathLine(int path[], int len)
+{
+    int i;
+    if (len == 0)
+    {
+        cout << "No path found\n";
+        return;
+    }
+    for (i = 0; i < len; i++)
+        cout << path[i] << " ";
+    cout << "\n";
+}
+
+// NOTE: the blocked edge stays removed afterwards (removeEdge is permanent).
+void simulateBlockage(Graph &g, int startNode, int endNode,
+                      int blockedFrom, int blockedTo)
+{
+    int n = g.getNumNodes();
+    if (startNode < 0 || startNode >= n || endNode < 0 || endNode >= n)
+    {
+        cout << "simulateBlockage: invalid start or end node\n";
+        return;
+    }
+
+    BFSStrategy bfs;                     // existing strategy, unchanged
+    int path[MAX_NODES];
+    int len;
+
+    bfs.findPath(g, startNode, endNode, path, len);
+    cout << "Path before blockage: ";
+    printPathLine(path, len);
+
+    cout << "Blocking edge " << blockedFrom << " - " << blockedTo << "\n";
+    g.removeEdge(blockedFrom, blockedTo);
+
+    bfs.findPath(g, startNode, endNode, path, len);
+    cout << "Path after blockage:  ";
+    printPathLine(path, len);
+}
+
+// ---------- TASK 3: ISOLATION IMPACT ----------
+// Counts nodes reachable from start, pretending skipNode does not exist.
+// Pass skipNode = -1 to skip nothing.
+int countReachable(Graph &g, int start, int skipNode)
+{
+    int n = g.getNumNodes();
+    if (n > MAX_NODES) n = MAX_NODES;
+    if (start == skipNode || start < 0 || start >= n)
+        return 0;
+
+    int visited[MAX_NODES];
+    int queueArr[MAX_NODES];
+    int front = 0, rear = 0;
+    int count = 0;
+    int i, current, neighbor;
+
+    for (i = 0; i < MAX_NODES; i++)
+        visited[i] = 0;
+
+    queueArr[rear++] = start;
+    visited[start] = 1;
+
+    while (front < rear)
+    {
+        current = queueArr[front++];
+        count++;
+        for (neighbor = 0; neighbor < n; neighbor++)
+        {
+            if (neighbor != skipNode && !visited[neighbor] &&
+                g.getWeight(current, neighbor) != -1)
+            {
+                visited[neighbor] = 1;
+                queueArr[rear++] = neighbor;
+            }
+        }
+    }
+    return count;
+}
+
+// Returns how many OTHER nodes get cut off from referenceStartNode
+// if nodeToRemove disappears. Returns -1 on invalid input.
+// Graph is NOT modified.
+int isolationImpact(Graph &g, int nodeToRemove, int referenceStartNode)
+{
+    int n = g.getNumNodes();
+    if (nodeToRemove < 0 || nodeToRemove >= n ||
+        referenceStartNode < 0 || referenceStartNode >= n ||
+        nodeToRemove == referenceStartNode)
+        return -1;
+
+    int before = countReachable(g, referenceStartNode, -1);
+    int after  = countReachable(g, referenceStartNode, nodeToRemove);
+
+    // extra -1: the removed node itself is not "cut off", it is gone
+    return before - after - 1;
+}
+
+// ---------- TASK 4: SAVE / LOAD ----------
+// File format:  NODE <id> <label>     EDGE <from> <to> <cost> <directed>
+// Limitation: labels must not contain spaces or be empty.
+int saveGraphToFile(Graph &g, char filename[])
+{
+    ofstream f(filename);
+    if (!f)
+        return -1;
+
+    int i;
+    for (i = 0; i < g.getNodeCount(); i++)
+    {
+        Node nd = g.getNodeAt(i);
+        f << "NODE " << nd.id << " " << nd.label << "\n";
+    }
+    for (i = 0; i < g.getEdgeCount(); i++)
+    {
+        Edge e = g.getEdgeAt(i);
+        f << "EDGE " << e.fromId << " " << e.toId << " "
+          << e.cost << " " << e.directed << "\n";
+    }
+
+    if (!f)
+        return -1;
+    return 0;
+}
+
+// Loads INTO g, so pass a new empty Graph (existing content is kept).
+int loadGraphFromFile(Graph &g, char filename[])
+{
+    ifstream f(filename);
+    if (!f)
+        return -1;
+
+    char tag[10];
+    char label[50];
+    int id, from, to, directed;
+    float cost;
+
+    while (f >> tag)
+    {
+        if (strcmp(tag, "NODE") == 0)
+        {
+            f >> id;
+            f.width(50);
+            f >> label;
+            if (!f) return -1;
+            g.addNode(id, label);
+        }
+        else if (strcmp(tag, "EDGE") == 0)
+        {
+            f >> from >> to >> cost >> directed;
+            if (!f) return -1;
+            g.addEdge(from, to, cost, directed);
+        }
+        else
+            return -1;                   // unknown line = bad file
+    }
+    return 0;
+}
+
+// =====================================================================
+// ================== DEMO (console presentation) ======================
+// Everything below is presentation only. The engine above never
+// prints diagrams or uses any application words.
+// =====================================================================
+
+void banner(char title[])
+{
+    cout << "============================================================\n";
+    cout << "  " << title << "\n";
+    cout << "============================================================\n\n";
+}
+
+void nextScreen()
+{
+    cout << "\n   [ press any key to continue ]";
+    getch();
+    clrscr();
+}
+
+// Prints a text file line by line, indented, so we can SHOW what was saved.
+void showFile(char filename[])
+{
+    ifstream f(filename);
+    char line[100];
+
+    if (!f)
+    {
+        cout << "   (could not open " << filename << ")\n";
+        return;
+    }
+    while (f.getline(line, 100))
+        cout << "   | " << line << "\n";
+}
+
+// Takes the ABSTRACT base class by reference: works for any algorithm.
+void showPath(PathfindingStrategy &s, char name[], Graph &g, int from, int to)
+{
+    int path[MAX_NODES];
+    int len;
+    int result = s.findPath(g, from, to, path, len);
+
+    cout << "   " << name << " -> result = " << result << "   path: ";
+    printPathLine(path, len);
+}
+
+// ---------- SCREEN 0: STATUS ----------
+void demoStatus()
+{
+    banner("CRITIPATH - GRAPH ENGINE : STATUS REPORT");
+    cout << "   A general-purpose graph engine. No application words inside.\n\n";
+    cout << "   [DONE]  Node, Edge, Graph (classes, dynamic memory)\n";
+    cout << "   [DONE]  PathfindingStrategy + BFS + Dijkstra (polymorphism)\n";
+    cout << "   [DONE]  Nearest target search\n";
+    cout << "   [DONE]  Blockage simulation + reroute\n";
+    cout << "   [DONE]  Isolation impact report\n";
+    cout << "   [DONE]  Save / load graph to file\n";
+    cout << "   [DONE]  Event logger (LOG.TXT)\n";
+    cout << "   [DONE]  Timer\n\n";
+    cout << "   [NEXT]  AnalysisStrategy: articulation points + bridges\n";
+    cout << "   [NEXT]  Final menu-driven console demo\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 1: BFS vs DIJKSTRA (polymorphism) ----------
+void demoRoutes()
+{
+    int i;
+    Graph g;
+    for (i = 0; i < 4; i++) g.addNode(i, "N");
+    g.addEdge(0, 3, 10, 0);
+    g.addEdge(0, 1, 1, 0);
+    g.addEdge(1, 2, 1, 0);
+    g.addEdge(2, 3, 1, 0);
+
+    BFSStrategy bfs;
+    DijkstraStrategy dij;
+
+    banner("PART A: ROUTE FINDING - one interface, two algorithms");
+    cout << "   Same graph, same call. Only the algorithm object changes.\n\n";
+
+    cout << "  [0]------10------[3]\n";
+    cout << "   |                |\n";
+    cout << "   1                1\n";
+    cout << "   |                |\n";
+    cout << "  [1]------1-------[2]\n";
+    cout << "  (numbers on lines = edge cost)\n\n";
+
+    cout << "   Route from node 0 to node 3:\n";
+    showPath(bfs, "BFS     ", g, 0, 3);
+    showPath(dij, "Dijkstra", g, 0, 3);
+
+    cout << "\n   BFS result = hops (fewest edges).\n";
+    cout << "   Dijkstra result = total cost (cheapest route).\n";
+    cout << "   OOP: abstract base + virtual findPath() = polymorphism.\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 2: NEAREST TARGET ----------
+void demoNearest()
+{
+    int i;
+    Graph g;
+    for (i = 0; i < 5; i++) g.addNode(i, "N");
+    for (i = 0; i < 4; i++) g.addEdge(i, i + 1, 1, 0);
+
+    int isTarget[MAX_NODES];
+    int noTarget[MAX_NODES];
+    for (i = 0; i < MAX_NODES; i++)
+    {
+        isTarget[i] = 0;
+        noTarget[i] = 0;
+    }
+    isTarget[3] = 1;
+
+    banner("PART B: NEAREST TARGET");
+    cout << "   Which marked node (*) is closest, counting steps?\n\n";
+    cout << "  [0]--[1]--[2]--[3*]--[4]\n\n";
+
+    cout << "   Start at node 0 -> nearest target = "
+         << findNearestTarget(g, 0, isTarget) << "   (expect 3)\n";
+    cout << "   Start at node 4 -> nearest target = "
+         << findNearestTarget(g, 4, isTarget) << "   (expect 3)\n";
+    cout << "   No target marked -> result        = "
+         << findNearestTarget(g, 0, noTarget) << "  (expect -1)\n\n";
+
+    cout << "   -1 is our error code for \"nothing found\".\n";
+    cout << "   (Turbo C++ has no try/catch, so we return codes instead.)\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 3: BLOCKAGE ----------
+void demoBlockage()
+{
+    int i;
+    Graph g;
+    for (i = 0; i < 4; i++) g.addNode(i, "N");
+    g.addEdge(0, 1, 1, 0);
+    g.addEdge(1, 2, 1, 0);
+    g.addEdge(0, 2, 1, 0);
+    g.addEdge(2, 3, 1, 0);
+
+    banner("PART C: BLOCKAGE + AUTOMATIC REROUTE");
+    cout << "   BEFORE (all edges open):\n\n";
+    cout << "   +---------------+\n";
+    cout << "   |               |\n";
+    cout << "  [0]-----[1]-----[2]-----[3]\n\n";
+
+    cout << "   Engine output:\n";
+    cout << "   ----------------------------------\n";
+    simulateBlockage(g, 0, 3, 0, 2);
+    cout << "   ----------------------------------\n\n";
+
+    cout << "   AFTER (edge 0-2 closed):\n\n";
+    cout << "   X  edge 0-2 closed  X\n";
+    cout << "  [0]-----[1]-----[2]-----[3]\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 4: ISOLATION IMPACT ----------
+void demoIsolation()
+{
+    int i;
+    Graph g;
+    for (i = 0; i < 4; i++) g.addNode(i, "N");
+    g.addEdge(0, 1, 1, 0);
+    g.addEdge(1, 2, 1, 0);
+    g.addEdge(1, 3, 1, 0);
+
+    banner("PART D: ISOLATION IMPACT");
+    cout << "   If one node fails, how many others lose connection to node 0?\n\n";
+    cout << "  [0]-----[1]-----[2]\n";
+    cout << "           |\n";
+    cout << "          [3]\n\n";
+
+    cout << "   Node 1 fails -> nodes cut off = "
+         << isolationImpact(g, 1, 0) << "   (expect 2: nodes 2 and 3)\n";
+    cout << "   Node 2 fails -> nodes cut off = "
+         << isolationImpact(g, 2, 0) << "   (expect 0: nothing else depends on it)\n\n";
+
+    cout << "   Node 1 is a critical junction: the network splits without it.\n";
+    cout << "   (The next step finds such nodes automatically.)\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 5: SAVE / LOAD ----------
+void demoSaveLoad()
+{
+    Graph d;
+    d.addNode(0, "A");
+    d.addNode(1, "B");
+    d.addNode(2, "C");
+    d.addEdge(0, 1, 5, 0);
+    d.addEdge(1, 2, 3, 0);
+
+    banner("PART E: SAVE / LOAD (file handling)");
+    cout << "  [0:A]---5---[1:B]---3---[2:C]\n\n";
+
+    cout << "   Save to GRAPH.TXT  -> result = "
+         << saveGraphToFile(d, "GRAPH.TXT") << "   (0 = success)\n";
+    cout << "   File contents:\n";
+    showFile("GRAPH.TXT");
+
+    Graph e;
+    cout << "\n   Load into a NEW graph -> result = "
+         << loadGraphFromFile(e, "GRAPH.TXT") << "   (0 = success)\n";
+    cout << "   Original: " << d.getNodeCount() << " nodes, "
+         << d.getEdgeCount() << " edges\n";
+    cout << "   Loaded:   " << e.getNodeCount() << " nodes, "
+         << e.getEdgeCount() << " edges\n";
+
+    Graph x;
+    cout << "   Load a missing file    -> result = "
+         << loadGraphFromFile(x, "NOFILE.TXT") << "  (-1 = error)\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 6: LOGGER ----------
+void demoLogger()
+{
+    banner("PART F: EVENT LOGGER (file handling)");
+    cout << "   Each event is added as a new line in LOG.TXT.\n";
+    cout << "   (Demo clears the old log first so the output is clean.)\n\n";
+
+    remove("LOG.TXT");
+
+    cout << "   logEvent -> " << logEvent("Edge 0-2 blocked")
+         << "   (0 = success)\n";
+    cout << "   logEvent -> " << logEvent("Rerouted through node 1")
+         << "   (0 = success)\n\n";
+
+    cout << "   LOG.TXT now contains:\n";
+    showFile("LOG.TXT");
+
+    cout << "\n   Opened in append mode (ios::app): old lines are never erased.\n";
+    nextScreen();
+}
+
+// ---------- SCREEN 7: TIMER + SUMMARY ----------
+void demoSummary()
+{
+    Timer t;
+    long loopCounter;
+
+    t.start();
+    for (loopCounter = 0; loopCounter < 5000000L; loopCounter++)
+    {
+        // burn some time
+    }
+    t.stop();
+
+    banner("SUMMARY: WHAT EACH PART PROVES");
+    cout << "   Timer test loop took " << t.getElapsedSeconds() << " seconds\n\n";
+    cout << "   Node, Edge, Graph   Unit 2-3: classes, constructors,\n";
+    cout << "                       destructor, new / delete[]\n";
+    cout << "   PathfindingStrategy Unit 4: abstract class, virtual function\n";
+    cout << "   BFS, Dijkstra       Unit 4: inheritance, overriding,\n";
+    cout << "                       run-time polymorphism\n";
+    cout << "   Save/load, logger   Unit 5: ofstream, ifstream, ios::app\n";
+    cout << "   Return codes (-1)   Unit 6 idea: error handling without\n";
+    cout << "                       try/catch (not available in Turbo C++)\n\n";
+    cout << "   NEXT: AnalysisStrategy -> articulation points and bridges\n";
+}
+
+// ================== MAIN ==================
+int main()
+{
+    clrscr();
+
+    demoStatus();
+    demoRoutes();
+    demoNearest();
+    demoBlockage();
+    demoIsolation();
+    demoSaveLoad();
+    demoLogger();
+    demoSummary();
+
+    getch();
+    return 0;
+}
