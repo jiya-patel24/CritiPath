@@ -1,1 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CritiPath — Graph Analysis Engine</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- 1. Left Sidebar (220px) -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-row">
+          <span class="brand-title">CritiPath</span>
+        </div>
+        <div class="brand-subtitle">Graph Analysis Engine</div>
+      </div>
 
+      <nav class="sidebar-body">
+        <div class="sidebar-section-title">ENVIRONMENTS</div>
+        <ul class="sidebar-env-list" role="tablist">
+          <li class="env-item active" data-env="campus" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5"></path></svg>
+            <span class="nav-label">Campus</span>
+          </li>
+          <li class="env-item" data-env="hospital" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            <span class="nav-label">Hospital</span>
+          </li>
+          <li class="env-item" data-env="mall" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span class="nav-label">Mall</span>
+          </li>
+        </ul>
+
+        <div class="sidebar-section-title">NAVIGATION</div>
+        <ul class="sidebar-nav" role="tablist">
+          <li class="nav-item" data-view="overview" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span class="nav-label">Overview</span>
+          </li>
+          <li class="nav-item active" data-view="route" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+            <span class="nav-label">Route Analysis</span>
+          </li>
+          <li class="nav-item" data-view="network" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <span class="nav-label">Network Analysis</span>
+          </li>
+          <li class="nav-item" data-view="editor" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span class="nav-label">Graph Editor</span>
+          </li>
+          <li class="nav-item" data-view="engine" role="tab" tabindex="0">
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            <span class="nav-label">Engine Connection</span>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div>16-bit DOS Turbo C++ 3.0</div>
+        <div>Generic Graph Analysis Core</div>
+      </div>
+    </aside>
+
+    <!-- 2. Main Content Wrapper -->
+    <div id="main-wrapper">
+      
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <h1 class="view-heading" id="view-title">Route Analysis</h1>
+          <span class="graph-name-chip" id="graph-name-chip">Campus Demo</span>
+        </div>
+
+        <div class="top-bar-right">
+          <div class="status-pill connected" id="engine-status-pill">
+            <span class="status-dot"></span>
+            <span id="engine-status-text">C++ Engine Ready</span>
+          </div>
+
+          <button id="btn-reset-sample" class="sm" title="Restore default graph for active environment">Reset current graph</button>
+          <button id="btn-export-graph" class="sm" title="Export GRAPH.TXT format">Export graph</button>
+        </div>
+      </header>
+
+      <!-- Compact Summary Metrics Row -->
+      <div class="summary-strip">
+        <div class="metric-item">Nodes: <b id="stat-nodes">8</b> / 20 max</div>
+        <span class="metric-sep">|</span>
+        <div class="metric-item">Edges: <b id="stat-edges">10</b></div>
+        <span class="metric-sep">|</span>
+        <div class="metric-item">Blocked: <b id="stat-blocked">1</b></div>
+        <span class="metric-sep">|</span>
+        <div class="metric-item">Targets: <b id="stat-targets">2</b></div>
+        <span class="metric-sep">|</span>
+        <div class="metric-item">Last run: <b id="stat-last-op">None</b></div>
+      </div>
+
+      <!-- Main Body: Two Columns for Analysis, Full View for Editor / Connection -->
+      <main class="content-body">
+        
+        <!-- Graph Workspace (Shown in Overview, Route, Network, and Editor) -->
+        <section class="workspace-card" id="workspace-card">
+          <div class="workspace-head">
+            <ul class="legend-list">
+              <li class="legend-item"><span class="legend-marker sel"></span> Selected</li>
+              <li class="legend-item"><span class="legend-marker route"></span> Route</li>
+              <li class="legend-item"><span class="legend-marker blocked"></span> Blocked edge</li>
+              <li class="legend-item"><span class="legend-marker crit"></span> Critical</li>
+              <li class="legend-item"><span class="legend-marker target"></span> Target</li>
+            </ul>
+
+            <!-- Consolidated Graph View Controls -->
+            <div class="ws-controls">
+              <button id="btn-fit-view" class="sm" title="Fit all nodes in view">Fit view</button>
+              <button id="zoom-in" class="sm" title="Zoom in">+</button>
+              <button id="zoom-out" class="sm" title="Zoom out">−</button>
+              <button id="zoom-reset" class="sm" title="Reset view pan and zoom">Reset view</button>
+            </div>
+          </div>
+
+          <div class="svg-canvas-wrapper">
+            <svg id="graph-svg" role="application" aria-label="Interactive graph diagram"></svg>
+          </div>
+
+          <!-- Bottom Selection Bar -->
+          <div class="selection-bar">
+            <div class="selection-info" id="selection-info">
+              <span>No node selected. Click a node to inspect.</span>
+            </div>
+            <div class="selection-actions">
+              <button id="btn-set-start" class="sm" disabled>Set Start</button>
+              <button id="btn-set-dest" class="sm" disabled>Set Destination</button>
+              <button id="btn-toggle-target" class="sm" disabled>Toggle Target</button>
+              <button id="btn-clear-sel" class="sm" disabled>Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Side Panel: Dynamically Swapped Per View -->
+        <aside class="results-card" id="right-panel">
+          
+          <!-- View: Route Analysis Panel -->
+          <div id="panel-route" class="view-panel-content">
+            <div class="panel-header">
+              <h2 class="panel-title">Route Finding</h2>
+              <p class="panel-subtitle">Compute optimal paths using C++ algorithms</p>
+            </div>
+            <div class="panel-scroll">
+              <div class="form-section">
+                <label>Operation Type</label>
+                <div class="form-row">
+                  <select id="route-mode-select">
+                    <option value="point-to-point">Point-to-Point Route</option>
+                    <option value="nearest-target">Nearest Target Search</option>
+                  </select>
+                </div>
+
+                <div id="route-p2p-fields">
+                  <div class="form-row" style="margin-top: 8px;">
+                    <div class="form-col">
+                      <label for="route-from">Start Node</label>
+                      <select id="route-from"></select>
+                    </div>
+                    <div class="form-col">
+                      <label for="route-to">Destination</label>
+                      <select id="route-to"></select>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 8px;">
+                    <label for="route-strategy">Pathfinding Strategy</label>
+                    <select id="route-strategy">
+                      <option value="DIJKSTRA">Dijkstra · Lowest Cost</option>
+                      <option value="BFS">BFS · Fewest Steps</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div id="route-nearest-fields" style="display: none; margin-top: 8px;">
+                  <label for="nearest-from">Start Node</label>
+                  <select id="nearest-from"></select>
+                  <p class="hint-text" style="margin-top: 6px;">
+                    Finds the closest node marked as a Target by fewest steps (BFS). Target nodes are rendered as squares.
+                  </p>
+                </div>
+
+                <div class="form-row" style="margin-top: 10px;">
+                  <button id="btn-run-route" class="primary" style="flex: 1;">Find Route</button>
+                  <button id="btn-clear-route-results" class="sm">Clear</button>
+                </div>
+              </div>
+
+              <!-- Route Result Display -->
+              <div id="route-result-container">
+                <p class="hint-text">Select parameters and click "Find Route" to execute analysis on the C++ engine.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- View: Network Analysis Panel -->
+          <div id="panel-network" class="view-panel-content" style="display: none;">
+            <div class="panel-header">
+              <h2 class="panel-title">Network Vulnerabilities</h2>
+              <p class="panel-subtitle">Evaluate edge closures and articulation points</p>
+            </div>
+            <div class="panel-scroll">
+              <div class="form-section">
+                <label>Network Operation</label>
+                <select id="network-op-select">
+                  <option value="block">Edge Block Simulation (BLOCK)</option>
+                  <option value="critical">Critical Points & Bridges (CRITICAL)</option>
+                  <option value="isolate">Node Failure Reachability (ISOLATE)</option>
+                </select>
+
+                <!-- Block Simulation Controls -->
+                <div id="net-block-controls" style="margin-top: 8px;">
+                  <div class="form-row">
+                    <div class="form-col">
+                      <label for="net-block-from">Route From</label>
+                      <select id="net-block-from"></select>
+                    </div>
+                    <div class="form-col">
+                      <label for="net-block-to">Route To</label>
+                      <select id="net-block-to"></select>
+                    </div>
+                  </div>
+                  <div style="margin-top: 8px;">
+                    <label for="net-block-edge">Edge to Simulate Blocking</label>
+                    <select id="net-block-edge"></select>
+                  </div>
+                  <button id="btn-run-block" class="primary" style="width: 100%; margin-top: 10px;">Simulate Closure</button>
+                </div>
+
+                <!-- Critical Points Controls -->
+                <div id="net-critical-controls" style="display: none; margin-top: 8px;">
+                  <p class="hint-text">
+                    Runs Tarjan's DFS-based analysis to detect single points of failure: Articulation Points (nodes) and Bridges (edges) whose removal disconnects graph components.
+                  </p>
+                  <button id="btn-run-critical" class="primary" style="width: 100%; margin-top: 10px;">Find Critical Points</button>
+                </div>
+
+                <!-- Isolation Controls -->
+                <div id="net-isolate-controls" style="display: none; margin-top: 8px;">
+                  <label for="net-isolate-node">Failing Node</label>
+                  <select id="net-isolate-node"></select>
+                  <div style="margin-top: 8px;">
+                    <label for="net-isolate-ref">Reference Observer Node</label>
+                    <select id="net-isolate-ref"></select>
+                  </div>
+                  <p class="hint-text" style="margin-top: 6px;">
+                    Calculates how many OTHER nodes lose connectivity to the reference node if the failing node is removed.
+                  </p>
+                  <button id="btn-run-isolate" class="primary" style="width: 100%; margin-top: 10px;">Calculate Isolation Impact</button>
+                </div>
+              </div>
+
+              <!-- Network Result Container -->
+              <div id="network-result-container">
+                <p class="hint-text">Choose an analysis to run on the network.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- View: Simplified Overview Panel (No redundant stats, no nested cards) -->
+          <div id="panel-overview" class="view-panel-content" style="display: none;">
+            <div class="panel-header">
+              <h2 class="panel-title">System Overview</h2>
+              <p class="panel-subtitle" id="overview-env-subtitle">Multi-environment graph analysis</p>
+            </div>
+            <div class="panel-scroll">
+              <div class="result-box">
+                <p style="font-size: 13px; line-height: 1.5; color: var(--text-main);">
+                  CritiPath is a generic Object-Oriented graph analysis engine. Select an environment from the sidebar (Campus, Hospital, or Mall) to run pathfinding algorithms and vulnerability assessments.
+                </p>
+              </div>
+
+              <div class="form-section">
+                <label>Quick Actions</label>
+                <button id="btn-quick-route" class="primary" style="width: 100%;">Find Route</button>
+                <button id="btn-quick-critical" style="width: 100%; margin-top: 6px;">Scan Network Weak Points</button>
+                <button id="btn-quick-editor" style="width: 100%; margin-top: 6px;">Open Graph Editor</button>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- View: Dedicated Graph Editor Full View -->
+        <section class="full-view-panel" id="full-view-editor">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+              <h2 style="font-size: 18px; font-weight: 700;">Graph Editor</h2>
+              <p class="hint-text">Add and remove nodes and edges. Modifying the graph invalidates earlier analysis results.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="ed-btn-reset-sample" class="sm" title="Restore default graph for active environment">Reset current graph</button>
+              <button id="ed-btn-clear-graph" class="sm danger">Clear graph</button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Node Management -->
+            <div class="result-box" style="background-color: var(--panel-bg);">
+              <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Add Node</h3>
+              <form id="form-add-node" style="display: flex; gap: 8px; align-items: flex-end;">
+                <div style="width: 80px;">
+                  <label for="new-node-id">Next ID</label>
+                  <input type="text" id="new-node-id" readonly disabled class="mono">
+                </div>
+                <div style="flex: 1;">
+                  <label for="new-node-label">Label (letters, digits, _)</label>
+                  <input type="text" id="new-node-label" placeholder="e.g. Science_Block" maxlength="49" required>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                    <input type="checkbox" id="new-node-target"> Target
+                  </label>
+                </div>
+                <button type="submit" class="primary" style="margin-bottom: 2px;">Add Node</button>
+              </form>
+              <p id="msg-node" class="hint-text" style="margin-top: 6px;"></p>
+
+              <h4 style="font-size: 13px; font-weight: 600; margin-top: 16px;">Existing Nodes</h4>
+              <table class="editor-table" id="table-nodes">
+                <thead>
+                  <tr><th>ID</th><th>Label</th><th>Target</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <!-- Edge Management -->
+            <div class="result-box" style="background-color: var(--panel-bg);">
+              <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">Add Edge</h3>
+              <form id="form-add-edge" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 90px;">
+                  <label for="edge-from">From</label>
+                  <select id="edge-from"></select>
+                </div>
+                <div style="flex: 1; min-width: 90px;">
+                  <label for="edge-to">To</label>
+                  <select id="edge-to"></select>
+                </div>
+                <div style="width: 80px;">
+                  <label for="edge-cost">Weight</label>
+                  <input type="number" id="edge-cost" min="1" max="9998" placeholder="50" required>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                    <input type="checkbox" id="edge-directed"> 1-way
+                  </label>
+                </div>
+                <button type="submit" class="primary" style="margin-bottom: 2px;">Add Edge</button>
+              </form>
+              <p id="msg-edge" class="hint-text" style="margin-top: 6px;"></p>
+
+              <h4 style="font-size: 13px; font-weight: 600; margin-top: 16px;">Existing Edges</h4>
+              <table class="editor-table" id="table-edges">
+                <thead>
+                  <tr><th>From</th><th>To</th><th>Weight</th><th>Type</th><th>State</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Engine Connection Panel with Collapsible About Project -->
+        <section class="full-view-panel" id="full-view-engine">
+          <div style="margin-bottom: 16px;">
+            <h2 style="font-size: 18px; font-weight: 700;">Engine Connection & Diagnostics</h2>
+            <p class="hint-text">Truthful verification of the DOSBox 0.74 environment and 16-bit C++ engine binary.</p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Connection Status Cards -->
+            <div class="result-box" style="background-color: var(--panel-bg);">
+              <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Component Readiness</h3>
+              
+              <table class="stats-table">
+                <tr><td>HTTP Server Bridge</td><td><span class="badge engine">Online (port 8000)</span></td></tr>
+                <tr><td>DOSBox 0.74 Emulator</td><td id="diag-dosbox">Checking...</td></tr>
+                <tr><td>ENGINE.EXE (16-bit Turbo C++)</td><td id="diag-engine">Checking...</td></tr>
+                <tr><td>GRAPH.TXT Exchange</td><td><span class="badge engine">Automated</span></td></tr>
+                <tr><td>Thread Mutex Lock</td><td><span class="badge engine">Active</span></td></tr>
+              </table>
+
+              <div style="margin-top: 16px;">
+                <button id="btn-test-engine" class="primary" style="width: 100%;">Run Live Engine Diagnostic Test (ROUTE 0 3)</button>
+              </div>
+              <div id="diag-test-result" style="margin-top: 10px;"></div>
+            </div>
+
+            <!-- Architecture & Log Viewer -->
+            <div class="result-box" style="background-color: var(--panel-bg);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="font-size: 14px; font-weight: 600;">Live LOG.TXT Stream</h3>
+                <button id="btn-refresh-log" class="sm">Refresh Log</button>
+              </div>
+              <p class="hint-text" style="margin-bottom: 8px;">
+                The C++ engine logs every command execution with timestamp to <code>LOG.TXT</code> via <code>LOGGER.H</code>.
+              </p>
+              <pre id="log-viewer" class="mono" style="background-color: #252B28; color: #E8EBE6; padding: 12px; border-radius: 4px; font-size: 11.5px; height: 180px; overflow-y: auto;"></pre>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Custom GRAPH.TXT Import -->
+  <input type="file" id="input-import-graph" accept=".txt,text/plain" style="display: none;">
+
+  <!-- Scripts -->
+  <script src="apiClient.js"></script>
+  <script src="fileBridge.js"></script>
+  <script src="graphEditor.js"></script>
+  <script src="graphView.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
